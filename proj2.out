@@ -3,11 +3,8 @@
 3: U 1: started
 4: Z 2: started
 5: U 2: started
-6: U 3: started
-7: U 3: going home
-8: U 4: started
-9: U 4: going home
-10: U 1: going home
-10: Z 1: going home
-11: U 2: going home
-11: Z 2: going home
+6: Z 3: started
+7: Z 2: going home
+8: Z 1: going home
+9: U 1: going home
+10: U 2: going home

@@ -19,7 +19,11 @@ sem_t *service_1; // Rada pro sluzbu 4
 sem_t *service_2; // Rada pro sluzbu 2
 sem_t *service_3; // Rada pro sluzbu 3
 
-    
+ /*
+ 
+ TODO: PREDELAT SERVICES DO POLE SEMAFORU!!!
+ 
+ */   
 
 int semaphore_init() {
 /* Hint z knihy
@@ -53,11 +57,7 @@ barberDone.
     }
 
     // inicializace mutexu na hodnotu 1
-    mutex = sem_open("/xjerab28_sem_mutex", O_CREAT , 0666, 0);
-    if (mutex == SEM_FAILED) {
-        fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
-        return 1;
-    }
+
     customer = sem_open("/xjerab28_sem_customer", O_CREAT , 0666, 0);
     if (customer == SEM_FAILED) {
         fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
@@ -137,10 +137,8 @@ void shared_memory(mem_t *memory) {
     */
     
 }
-void clean(mem_t *memory) {
+void clean_sem() {
 
-    sem_close(mutex);
-    sem_unlink("/xjerab28_sem_mutex");
     sem_close(customer);
     sem_unlink("/xjerab28_sem_customer");
     sem_close(official);
@@ -157,6 +155,11 @@ void clean(mem_t *memory) {
     sem_unlink("/xjerab28_sem_service_customer_done");
     sem_close(official_done);
     sem_unlink("/xjerab28_sem_service_official_done");
+}
+void clean(mem_t *memory) {
+
+    fclose(file);
+
     DEL_SHARED(memory->A_counter);
     DEL_SHARED(memory->cust_id);
     DEL_SHARED(memory->off_id);
@@ -165,7 +168,6 @@ void clean(mem_t *memory) {
     DEL_SHARED(memory->service_1);
     DEL_SHARED(memory->service_2);
     DEL_SHARED(memory->service_3);
-    fclose(file);
 
 }
 
@@ -190,16 +192,19 @@ void customer_process(arg_t args, mem_t *memory) {
     sem_post(output);
     // Zakaznik jde spinkat v i intervalu <0,TZ>
     //srand(time(NULL) + getpid());
-    usleep(((rand() + getpid()) % args.customer_wait) * 1000);
+    if(args.customer_wait != 0) {
+        usleep(((rand() + getpid()) % args.customer_wait) * 1000);
+    }
     // Pokud je posta zavrena, jde domu
     if (*memory->is_opened == 0) {
+        sem_wait(output);
         sem_post(customer);
         sem_wait(official);
-        sem_wait(output);
+        ++(*memory->A_counter);
         --(*memory->customers);
         fprintf(file,"%d: Z %d: going home\n", *memory->A_counter, customer_id);
         sem_post(output);
-        exit(0);
+        return;
     }
 
 
@@ -239,6 +244,7 @@ void customer_process(arg_t args, mem_t *memory) {
 
         sem_post(customer_done);
         sem_wait(official_done);
+        //fprintf(file, "Jsem zakaznik a chci domu\n");
     }
     else if(service == 2) {
         sem_post(service_2);
@@ -263,9 +269,9 @@ void customer_process(arg_t args, mem_t *memory) {
 
     sem_wait(output);
     ++(*memory->A_counter);
-    //--(*memory->customers);
     fprintf(file,"%d: Z %d: going home\n", *memory->A_counter, customer_id);
     sem_post(output);
+    exit(0);
 }
 
 
@@ -284,23 +290,27 @@ void official_process(arg_t args, mem_t *memory) {
 
         //srand(time(NULL) + getpid());
         //int service = (rand() % 3) + 1;
+        sem_wait(output);
         if(*memory->customers > 0) {
-            //fprintf(file,"Tady je zase %d\n", official_id);
-            sem_wait(output);
             --(*memory->customers);
             sem_post(output);
-
             sem_wait(customer);
             sem_post(official);
 
         }
+        
         else if (*memory->customers == 0 && *memory->is_opened == 1){
-            sem_wait(output);
+            //sem_post(output);
+            
+            //sem_wait(output);
             ++(*memory->A_counter);
             fprintf(file,"%d: U %d: taking break \n", *memory->A_counter, official_id);
             sem_post(output);
 
-            usleep((rand() % args.official_wait) * 1000 );
+            // Bere prestavku v intervalu <0,TU>
+            if(args.official_wait != 0) {
+                usleep(((rand() + getpid()) % args.official_wait) * 1000);
+            }
 
             sem_wait(output);
             ++(*memory->A_counter);
@@ -310,13 +320,13 @@ void official_process(arg_t args, mem_t *memory) {
         }
         else {
         // V poste uz nejsou zakaznici a je zavreno
-        sem_wait(output);
+        //sem_wait(output);
         ++(*memory->A_counter);
         fprintf(file,"%d: U %d: going home\n", *memory->A_counter, official_id);
         sem_post(output);
         break;
         }
-
+        
         int service = 1;
         // Jde obslouzit jednu ze tri front - neprazdnych
         // Sluzba 1
@@ -336,7 +346,7 @@ void official_process(arg_t args, mem_t *memory) {
             // Skonci s vyrizovanim
             sem_wait(output);
             ++(*memory->A_counter);
-            fprintf(file,"%d: U %d: service finished \n", *memory->A_counter, official_id);
+            fprintf(file,"%d: U %d: service finished\n", *memory->A_counter, official_id);
             sem_post(output);     
 
             sem_wait(customer_done);
@@ -357,7 +367,7 @@ void official_process(arg_t args, mem_t *memory) {
             // Skonci s vyrizovanim
             sem_wait(output);
             ++(*memory->A_counter);
-            fprintf(file,"%d: U %d: service finished \n", *memory->A_counter, official_id);
+            fprintf(file,"%d: U %d: service finished\n", *memory->A_counter, official_id);
             sem_post(output);     
         }
         else if(service == 3 && *memory->service_3 > 0) {
@@ -374,7 +384,7 @@ void official_process(arg_t args, mem_t *memory) {
             // Skonci s vyrizovanim
             sem_wait(output);
             ++(*memory->A_counter);
-            fprintf(file,"%d: U %d: service finished \n", *memory->A_counter, official_id);
+            fprintf(file,"%d: U %d: service finished\n", *memory->A_counter, official_id);
             sem_post(output);    
 
         }
@@ -502,8 +512,8 @@ args.customer_wait = atoi(argv[3]);
 args.official_wait = atoi(argv[4]);
 args.post_close = atoi(argv[5]);
 
-
-
+    //clean(&memory);
+    //clean_sem();
 
 
 
@@ -514,7 +524,10 @@ semaphore_init(args);
 shared_memory(&memory);
 
     main_pid = fork();
-    
+        
+    //pid_t wpid;         // for main process to wait till child processes are dead
+    //int status = 0;
+
     if(main_pid == -1) {
         fprintf(stderr, "Chyba pri vytvareni ditete!");
         return 1;
@@ -539,14 +552,18 @@ shared_memory(&memory);
         srand(time(NULL) + getpid());
         usleep(((rand() % (args.post_close/2)) + args.post_close/2) * 1000);
     }
+
     sem_wait(output);
     *memory.is_opened = 0;
-    *memory.A_counter += 1;
+    ++(*memory.A_counter);
     fprintf(file, "%d: closing\n", *memory.A_counter);
     sem_post(output);
 
     while(wait(NULL) > 0);
+    //while ((wpid = wait(&status)) > 0);         // waiting for child processes to end
     clean(&memory);
+    clean_sem();
+
     exit(0);
     return 0;
 }

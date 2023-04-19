@@ -62,24 +62,27 @@ typedef struct {
 }arg_t;
 
 typedef struct Memory {
-    int *A_counter; //pořadové číslo
-    int *cust_id; //číslo skřítka
-    int *off_id; //číslo soba
-    int *customers; // pocet zakazniku v poste
-    int *is_opened;
+    int A_counter; //pořadové číslo
+    int cust_id; //číslo skřítka
+    int off_id; //číslo soba
+    int customers; // pocet zakazniku v poste
+    int is_opened;
+    int service_q[3];
+}mem_t;
+    /*
     int *service_1;
     int *service_2;
     int *service_3;
-}mem_t;
+    */
 
 int semaphore_init();
 
-void clean(mem_t *memory);
+void clean();
 
 void my_print();
 
-void customer_process(arg_t args, mem_t *memory);
+void customer_process(arg_t args);
 
-void official_process(arg_t args, mem_t *memory);
+void official_process(arg_t args);
 
 int check_args(char **argv, int argc);

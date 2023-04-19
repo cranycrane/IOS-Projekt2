@@ -19,6 +19,8 @@ sem_t *service_1; // Rada pro sluzbu 4
 sem_t *service_2; // Rada pro sluzbu 2
 sem_t *service_3; // Rada pro sluzbu 3
 
+sem_t *service[3];
+
  /*
  
  TODO: PREDELAT SERVICES DO POLE SEMAFORU!!!
@@ -73,6 +75,8 @@ barberDone.
         fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
         return 1;
     }
+
+    /*
     service_1 = sem_open("/xjerab28_sem_service_1", O_CREAT , 0666, 0);
     if (output == SEM_FAILED) {
         fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
@@ -84,6 +88,23 @@ barberDone.
         return 1;
     }
     service_3 = sem_open("/xjerab28_sem_service_3", O_CREAT , 0666, 0);
+    if (output == SEM_FAILED) {
+        fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
+        return 1;
+    }
+    */
+
+    service[0] = sem_open("/xjerab28_sem_service_1", O_CREAT , 0666, 0);
+    service[1] = sem_open("/xjerab28_sem_service_2", O_CREAT , 0666, 0);
+    service[2] = sem_open("/xjerab28_sem_service_3", O_CREAT , 0666, 0);
+
+    for(int i = 0; i < 3; i++) {
+        if (service[i] == SEM_FAILED) {
+        fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
+        return 1;
+        }
+    }
+
     if (output == SEM_FAILED) {
         fprintf(stderr, "Chyba pri vytvareni semaforuuu!");
         return 1;
@@ -112,15 +133,18 @@ barberDone.
 
     return 0;
 }
+
 void shared_memory(mem_t *memory) {
     ALOC_SHARED(memory->A_counter);
     ALOC_SHARED(memory->cust_id);
     ALOC_SHARED(memory->off_id);
     ALOC_SHARED(memory->customers);
     ALOC_SHARED(memory->is_opened);
+
     ALOC_SHARED(memory->service_1);
     ALOC_SHARED(memory->service_2);
     ALOC_SHARED(memory->service_3);
+
     *memory->A_counter = 0;
     *memory->cust_id = 0;
     *memory->off_id = 0;
@@ -145,16 +169,25 @@ void clean_sem() {
     sem_unlink("/xjerab28_sem_official");
     sem_close(output);
     sem_unlink("/xjerab28_sem_output");
+    /*
     sem_close(service_1);
     sem_unlink("/xjerab28_sem_service_1");
     sem_close(service_2);
     sem_unlink("/xjerab28_sem_service_2");
     sem_close(service_3);
     sem_unlink("/xjerab28_sem_service_3");
+    */
+    for(int i = 0; i < 3; i++) {
+        sem_close(service[i]);
+    }
+    sem_unlink("/xjerab28_sem_service_1");
+    sem_unlink("/xjerab28_sem_service_2");
+    sem_unlink("/xjerab28_sem_service_3");
+
     sem_close(customer_done);
-    sem_unlink("/xjerab28_sem_service_customer_done");
+    sem_unlink("/xjerab28_sem_customer_done");
     sem_close(official_done);
-    sem_unlink("/xjerab28_sem_service_official_done");
+    sem_unlink("/xjerab28_sem_official_done");
 }
 void clean(mem_t *memory) {
 
@@ -460,7 +493,7 @@ void office_gen(arg_t args, mem_t *memory) {
             exit(0);
         }
     }
-    exit(0);
+   //exit(0);
 }
 
 void cust_gen(arg_t args, mem_t *memory) {
@@ -478,7 +511,7 @@ void cust_gen(arg_t args, mem_t *memory) {
 
         }
     }
-    exit(0);
+    //exit(0);
 }
 
 int main(int argc, char *argv[]) {
@@ -494,7 +527,7 @@ F: Maximální čas v milisekundách, po kterém je uzavřena pošta pro nově p
 */
 arg_t args;
 mem_t memory;
-pid_t main_pid;
+//pid_t main_pid;
 
 
 memory.A_counter = NULL;
@@ -523,29 +556,31 @@ printf("n_customers = %d, n_officials = %d, customer_wait = %d, official_wait = 
 semaphore_init(args);
 shared_memory(&memory);
 
-    main_pid = fork();
+    //main_pid = fork();
         
-    //pid_t wpid;         // for main process to wait till child processes are dead
-    //int status = 0;
-
+    pid_t wpid;         // for main process to wait till child processes are dead
+    int status = 0;
+/*
     if(main_pid == -1) {
         fprintf(stderr, "Chyba pri vytvareni ditete!");
         return 1;
     }
-    else if(main_pid == 0) {
+    //else if(main_pid == 0) {
         pid_t CustOff = fork();
         if(CustOff == -1) {
             fprintf(stderr, "Chyba pri vytvareni ditete!");
             return 1;
         }
-        else if(CustOff ==  0) {
-            office_gen(args, &memory);
-        }
-        else {
+        
+*/
+        //else if(CustOff ==  0) {
             cust_gen(args, &memory);
+        //}
+        //else {
+            office_gen(args, &memory);
 
-        }
-    }
+        //}
+    //}
 
 
     if(args.post_close > 1) {
@@ -559,11 +594,12 @@ shared_memory(&memory);
     fprintf(file, "%d: closing\n", *memory.A_counter);
     sem_post(output);
 
-    while(wait(NULL) > 0);
-    //while ((wpid = wait(&status)) > 0);         // waiting for child processes to end
+    //while(wait(NULL));
+    printf("Jsem tady\n");
+    while ((wpid = wait(&status)) > 0);         // waiting for child processes to end
     clean(&memory);
     clean_sem();
-
     exit(0);
     return 0;
+
 }

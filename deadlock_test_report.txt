@@ -1,0 +1,26 @@
+1:./proj2 1 1 0 0 100
+2:./proj2 3 2 100 100 100
+3:./proj2 5 1 4 0 100
+4:./proj2 5 2 30 0 100
+5:./proj2 4 2 30 50 200
+6:./proj2 0 1 80 100 200
+Nespravna hodnota prvniho argumentu
+7:./proj2 0 50 10 100 200
+Nespravna hodnota prvniho argumentu
+8:./proj2 0 20 0 60 0
+Nespravna hodnota prvniho argumentu
+9:./proj2 0 10 9 0 0
+Nespravna hodnota prvniho argumentu
+10:./proj2 3 0 20 10 100
+11:./proj2 5 0 0 0 0
+12:./proj2 0 0 0 0 0
+Nespravna hodnota prvniho argumentu
+13:./proj2 0 0 0 0 300
+Nespravna hodnota prvniho argumentu
+14:./proj2 10 5 100 30 0
+15:./proj2 15 3 200 40 5
+16:./proj2 10 1 800 100 300
+17:./proj2 8 2 0 0 0
+18:./proj2 4 6 0 10 0
+19:./proj2 5 2 20 0 0
+20:./proj2 5 1 0 0 10

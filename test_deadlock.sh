@@ -77,6 +77,7 @@ deadlock_test 100 1 50 40 1000
 deadlock_test 200 1 50 40 10
 deadlock_test 300 20 500 80 300
 deadlock_test 30 50 300 100 500
+deadlock_test 30 50 10000 100 10000
 fi
 fi
 echo "======     Test ended      ======"

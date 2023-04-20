@@ -1,18 +1,11 @@
-//====================//
-//
-// Purpose:     Header file for main.c
-//
-// $NoKeywords: $ios_project2
-// $Author:     JAKUB JERABEK <xjerab28@stud.fit.vutbr.cz>
-// $Date:       $2023-04-13
-//============================================================================//
 /**
  * @file main.h
- * @author JAKUB JERABEK
+ * @author Jakub Jerabek (xjerab28)
  * 
  * @brief Hlavickovy soubor pro main.c
  */
-// Standard libs
+
+
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -20,7 +13,7 @@
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
-// Process sync libs
+
 #include <fcntl.h>
 #include <semaphore.h>
 #include <signal.h>
@@ -31,7 +24,7 @@
 #include <unistd.h>
 
 
-#define MEM_COUNT 6
+
 
 
 typedef struct {

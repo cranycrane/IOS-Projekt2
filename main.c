@@ -1,10 +1,11 @@
-
+/**
+ * @file main.c
+ * @brief Hlavni implementace projektu IOS FIT VUT
+ * @author Jakub Jerabek (xjerab28)
+ * @date 20.04.2023
+*/
 
 #include "main.h"
-
-// stream https://www.youtube.com/watch?v=mXo8wSXUKvo&ab_channel=ToasterBro
-// kniha https://greenteapress.com/semaphores/LittleBookOfSemaphores.pdf
-
 
 
 FILE *file;
@@ -142,6 +143,9 @@ void customer_process(arg_t args) {
     if(args.customer_wait != 0) {
         usleep(((rand() + getpid()) % args.customer_wait) * 1000);
     }
+    else {
+        usleep(0);
+    }
 
     // Pokud je posta zavrena, jde domu
     if (memory->is_opened == 0) {
@@ -164,7 +168,6 @@ void customer_process(arg_t args) {
     ++memory->A_counter;
     fprintf(file,"%d: Z %d: entering office for a service %d\n", memory->A_counter, customer_id, service_id+1);
     sem_post(output);
-
     // Ceka, nez si ho vezme urednik - zaradi se do fronty
     sem_wait(service[service_id]);
     sem_post(customer);
@@ -247,33 +250,35 @@ void official_process(arg_t args) {
         else if (memory->service_q[0] == 0 && memory->service_q[1] == 0 && memory->service_q[2] == 0 && memory->is_opened == 1){
             sem_wait(output);
             ++memory->A_counter;
-            fprintf(file,"%d: U %d: taking break \n", memory->A_counter, official_id);
+            fprintf(file,"%d: U %d: taking break\n", memory->A_counter, official_id);
             sem_post(output);
 
             // Bere prestavku v intervalu <0,TU>
+            srand(time(NULL) + getpid());
             if(args.official_wait != 0) {
-                usleep(((rand() + getpid()) % args.official_wait) * 1000);
+                usleep(((rand() + getpid()) % (args.official_wait)) * 1000);
+            }
+            else {
+                usleep(0);
             }
             // Skonci prestavku a pokracuje v cyklu
             sem_wait(output);
             ++memory->A_counter;
             fprintf(file,"%d: U %d: break finished \n", memory->A_counter, official_id);
             sem_post(output);
-            continue;
+            //continue;
         }
         // Nebo konci = posta je zavrena a nejsou zakaznici
-        else {
-
-        break;
+        else if (memory->is_opened == 0 && memory->service_q[0] == 0 && memory->service_q[1] == 0 && memory->service_q[2] == 0) {
+            // Jde domu a ukoncuje cinnost
+            sem_wait(output);
+            ++memory->A_counter;
+            fprintf(file,"%d: U %d: going home\n", memory->A_counter, official_id);
+            sem_post(output);
+            exit(0);
         
         }   
     }
-    // Jde domu a ukoncuje cinnost
-    sem_wait(output);
-    ++memory->A_counter;
-    fprintf(file,"%d: U %d: going home\n", memory->A_counter, official_id);
-    sem_post(output);
-    exit(0);
 }
 
 
@@ -383,9 +388,12 @@ shared_memory();
 
     office_gen(args);
 
-    if(args.post_close > 1) {
+    if(args.post_close > 0) {
         srand(time(NULL) + getpid());
         usleep(((rand() % (args.post_close/2)) + args.post_close/2) * 1000);
+    }
+    else {
+        usleep(0);
     }
 
     sem_wait(output);
@@ -393,21 +401,11 @@ shared_memory();
     ++memory->A_counter;
     fprintf(file, "%d: closing\n", memory->A_counter);
     sem_post(output);
+    
+    //Cekani, dokud neskonci vsechny deti - procesy
 
-    //ošetřím to, aby se mi hlavní proces ukončil až tehdy, pokud se ukončí všechny ostatní
-    //for (int i = 0; i < args.n_customers + args.n_officials + 1; i++)
-    //    wait(NULL);
-    /*
-    while(wait(NULL)) {
-    if (errno == ECHILD) {
-       break;
-    }
-    }
-    */
-    wait(NULL);
-    wait(NULL);
-    //while(wait(NULL) > 0);
-    //while ((wpid = wait(&status)) > 0);         // waiting for child processes to end
+    while(wait(NULL) > 0);
+ 
     clean();
     clean_sem();
     fclose(file);

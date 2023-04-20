@@ -12,7 +12,9 @@ Nespravna hodnota prvniho argumentu
 9:./proj2 0 10 9 0 0
 Nespravna hodnota prvniho argumentu
 10:./proj2 3 0 20 10 100
+Nespravna hodnota druheho argumentu
 11:./proj2 5 0 0 0 0
+Nespravna hodnota druheho argumentu
 12:./proj2 0 0 0 0 0
 Nespravna hodnota prvniho argumentu
 13:./proj2 0 0 0 0 300

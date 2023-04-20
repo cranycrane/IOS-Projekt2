@@ -30,59 +30,79 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-/*
-#define SEM_COUNT 6
-enum semaphores
-{
-        mutex,
-        mutex2,
-        finish,
-        oxyQueue,
-        hydroQueue,
-        obarrier,
-};
-const char *semaphore_names[] = {
-    "/xjerab28_sem_mutexxx",
-    "/xjerab28_sem_mutex2",
-    "finish",
-    "oxyQueue",
-    "hydroQueue",
-    "obarrier",
-};
-*/
+
 #define MEM_COUNT 6
 
 
 typedef struct {
-    int n_customers;
-    int n_officials;
-    int customer_wait;
-    int official_wait;
-    int post_close;
+    int n_customers;    // pocet zakazniku
+    int n_officials;    // pocet uredniku > 0
+    int customer_wait;  // cekani zakaznika 0<=TZ<=10000 v milisekundach
+    int official_wait;  // prestavka urednika 0<=TU<=100 v milisekundach
+    int post_close;     // doba,po ktere se posta uzavre 0<=F<=1000 v milisekundach
 }arg_t;
 
 typedef struct Memory {
     int A_counter; //pořadové číslo
-    int cust_id; //číslo skřítka
-    int off_id; //číslo soba
-    int customers; // pocet zakazniku v poste
-    int is_opened;
-    int service_q[3];
+    int cust_id; //ID zakaznika
+    int off_id; //ID urednika
+    int customers; // pocet "zijicich" zakazniku
+    int is_opened; // 0 - zavreno, 1 - otevreno
+    int service_q[3]; // pocet zakazniku cekajicich na service
 }mem_t;
-    /*
-    int *service_1;
-    int *service_2;
-    int *service_3;
-    */
 
+/**
+ * @brief Inicializuje vsechny potrebne semafory
+ * 
+ * @return Vrati 1, pokud se nepodarilo semafory inicializovat, jinak nic.
+ * Funkce vypočítá faktoriál pro zadané celé číslo. Pokud je číslo menší nebo rovno 0, vrátí 1.
+ */
 int semaphore_init();
 
+/**
+ * @brief Alokuje sdilenou pamet pro procesy
+ * 
+ * Alokuje deklarovanou strukturu mem_t a tu alokuje pomoci mmap
+ */
+void shared_memory();
+
+/**
+ * @brief Vycisti a uvolni vytvorene semafory
+ */
+void clean_sem();
+
+/**
+ * @brief Uvolni alokovanou strukturu mem_t
+ */
 void clean();
 
-void my_print();
-
+/**
+ * @brief Proces zakaznika
+ */
 void customer_process(arg_t args);
 
+/**
+ * @brief Proces urednika
+*/
 void official_process(arg_t args);
 
+/**
+ * @brief Kontrola argumentu
+ * 
+ * @param argv Pole argumentu
+ * @param argc Pocet argumentu
+ * @return 0 pokud argumenty odpovidaji specifikaci, jinak 1
+ */
 int check_args(char **argv, int argc);
+
+/**
+ * @brief Vygeneruje procesy urednika
+ * @param args struktura obsahujici zadane argumenty
+ */
+void office_gen(arg_t args);
+
+/**
+ * @brief Vygeneruje procesy zakaznika
+ * @param args struktura obsahujici zadane argumenty
+ */
+void cust_gen(arg_t args);

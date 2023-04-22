@@ -10,6 +10,8 @@
 
 FILE *file;
 
+
+sem_t *mainp;
 sem_t *customer; // Rada pro zakazniky
 sem_t *customer_done; // Rada pro zakazniky
 sem_t *output; // Kontroluje zapis do souboru
@@ -32,6 +34,11 @@ int semaphore_init() {
     }
 
     // inicializace output semaforu na hodnotu 1
+    mainp = sem_open("/xjerab28_sem_mainp", O_CREAT , 0666, 1);
+    if (mainp == SEM_FAILED) {
+        fprintf(stderr, "Chyba pri vytvareni semaforu!");
+        return 1;
+    }
 
     output = sem_open("/xjerab28_sem_output", O_CREAT , 0666, 1);
     if (output == SEM_FAILED) {
@@ -99,6 +106,9 @@ void shared_memory() {
 }
 void clean_sem() {
 
+    sem_close(mainp);
+    sem_unlink("/xjerab28_sem_mainp");
+
     sem_close(customer);
     sem_unlink("/xjerab28_sem_customer");
     sem_close(official);
@@ -141,10 +151,10 @@ void customer_process(arg_t args) {
     // Zakaznik jde spinkat v i intervalu <0,args.customer_wait>
 
     if(args.customer_wait != 0) {
-        usleep(((rand() + getpid()) % args.customer_wait) * 1000);
+        usleep(((rand() + getpid()) % args.customer_wait+1) * 1000);
     }
     else {
-        usleep(0);
+        usleep(1);
     }
 
     // Pokud je posta zavrena, jde domu
@@ -152,7 +162,7 @@ void customer_process(arg_t args) {
         sem_wait(output);
         ++memory->A_counter;
         --memory->customers;
-        fprintf(file,"%d: Z %d: going homeeee\n", memory->A_counter, customer_id);
+        fprintf(file,"%d: Z %d: going home\n", memory->A_counter, customer_id);
         sem_post(output);
         exit(0);
     }
@@ -206,11 +216,14 @@ void official_process(arg_t args) {
     fprintf(file,"%d: U %d: started\n", memory->A_counter, official_id);
     sem_post(output);
 
+    srand(time(NULL) + getpid());
+
     // Zacatek cyklu urednika
     while(1) {
         // Kontroluje, zda ve fronte cekaji zakaznici
+        sem_wait(output);
         if(memory->service_q[0] > 0 || memory->service_q[1] > 0 || memory->service_q[2] > 0) {
-            sem_wait(output);
+            //sem_wait(output);
             // Jde obslouzit jednu ze tri front - neprazdnych
             // Interval <0,2>
             int service_id;
@@ -247,31 +260,31 @@ void official_process(arg_t args) {
             sem_post(output);     
         }
         // Pokud nejsou zakaznici ve fronte, bere si prestavku
-        else if (memory->service_q[0] == 0 && memory->service_q[1] == 0 && memory->service_q[2] == 0 && memory->is_opened == 1){
-            sem_wait(output);
+        else if (memory->is_opened == 1 && memory->service_q[0] == 0 && memory->service_q[1] == 0 && memory->service_q[2] == 0 ){
+            //sem_wait(output);
             ++memory->A_counter;
             fprintf(file,"%d: U %d: taking break\n", memory->A_counter, official_id);
             sem_post(output);
 
             // Bere prestavku v intervalu <0,TU>
-            srand(time(NULL) + getpid());
+            //srand(time(NULL) + getpid());
             if(args.official_wait != 0) {
-                usleep(((rand() + getpid()) % (args.official_wait)) * 1000);
+                usleep(((rand() + getpid()) % args.official_wait+1) * 1000);
             }
             else {
-                usleep(0);
+                usleep(1);
             }
             // Skonci prestavku a pokracuje v cyklu
             sem_wait(output);
             ++memory->A_counter;
             fprintf(file,"%d: U %d: break finished \n", memory->A_counter, official_id);
             sem_post(output);
-            //continue;
+            continue;
         }
         // Nebo konci = posta je zavrena a nejsou zakaznici
         else if (memory->is_opened == 0 && memory->service_q[0] == 0 && memory->service_q[1] == 0 && memory->service_q[2] == 0) {
             // Jde domu a ukoncuje cinnost
-            sem_wait(output);
+            //sem_wait(output);
             ++memory->A_counter;
             fprintf(file,"%d: U %d: going home\n", memory->A_counter, official_id);
             sem_post(output);
@@ -366,7 +379,7 @@ int main(int argc, char *argv[]) {
 arg_t args;
 
 if(check_args(argv, argc) == 1) {
-    exit(0);
+    exit(1);
     return 1;
 }
 
@@ -388,14 +401,18 @@ shared_memory();
 
     office_gen(args);
 
-    if(args.post_close > 0) {
+    if(args.post_close > 1) {
         srand(time(NULL) + getpid());
-        usleep(((rand() % (args.post_close/2)) + args.post_close/2) * 1000);
+        useconds_t post_sleep = (rand() % (args.post_close/2+1)) + args.post_close/2;
+        usleep(post_sleep * 1000);
     }
     else {
         usleep(0);
     }
 
+    sem_wait(mainp);
+    sem_post(mainp);
+    
     sem_wait(output);
     memory->is_opened = 0;
     ++memory->A_counter;
